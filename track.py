@@ -1,13 +1,14 @@
-import cv2
+import os
 import streamlit as st
+import cv2
 from ultralytics import YOLO
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
 import csv
 from collections import defaultdict
-import uuid  # For generating unique keys
-import os
+import uuid
+from huggingface_hub import hf_hub_download
 
 # Class ID to label mapping
 CLASS_MAP = {
@@ -17,32 +18,31 @@ CLASS_MAP = {
     7: 'truck'
 }
 
-# Cache the model to prevent reloading
+# Function to download YOLOv8 weights if not present
+def get_model_path():
+    model_file = "yolov8l.pt"
+    if not os.path.exists(model_file):
+        st.info("Downloading YOLOv8 model weights (~85 MB)...")
+        model_file = hf_hub_download(
+            repo_id="YOUR_HF_USERNAME/YOUR_REPO_NAME",  # Replace with your Hugging Face repo with yolov8l.pt
+            filename="yolov8l.pt"
+        )
+    return model_file
+
 @st.cache_resource
 def load_model():
-    """
-    Load YOLOv8 model safely.
-    Automatically downloads official weights if yolov8l.pt is missing.
-    """
-    return YOLO("yolov8l.pt")
+    model_path = get_model_path()
+    return YOLO(model_path)
 
-
-def run_tracker(video_path=0):  # 0 for webcam
-    """
-    Run real-time vehicle tracking and counting in Streamlit.
-    :param video_path: 0 for webcam, or path to video file
-    """
+def run_tracker(video_path=0):
     model = load_model()  # Load model safely
     vehicle_counts = defaultdict(int)
 
+    st.title("🚗 Real-Time Vehicle Counter")
     stframe = st.empty()
     chart_placeholder = st.empty()
 
     cap = cv2.VideoCapture(video_path)
-
-    if not cap.isOpened():
-        st.error("Cannot open video source. Please check your webcam or video file.")
-        return
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -59,19 +59,15 @@ def run_tracker(video_path=0):  # 0 for webcam
                     vehicle_counts[label] += 1
                     xyxy = box.xyxy[0].cpu().numpy().astype(int)
                     cv2.rectangle(frame, tuple(xyxy[:2]), tuple(xyxy[2:]), (0, 255, 0), 2)
-                    cv2.putText(frame, label, tuple(xyxy[:2]),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    cv2.putText(frame, label, tuple(xyxy[:2]), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-        # Display the frame in Streamlit
-        stframe.image(frame, channels='BGR', use_container_width=True)
+        stframe.image(frame, channels='BGR', use_column_width=True)
 
-        # Display live vehicle count chart
         df = pd.DataFrame(vehicle_counts.items(), columns=['Vehicle', 'Count'])
         fig = px.bar(df, x='Vehicle', y='Count', title='Live Vehicle Count')
-        chart_placeholder.plotly_chart(fig, use_container_width=True, key=str(uuid.uuid4()))
+        chart_placeholder.plotly_chart(fig, use_container_width=True, key=f"chart_{uuid.uuid4()}")
 
-        # Optional: save to CSV every 50 vehicles
-        if sum(vehicle_counts.values()) % 50 == 0 and sum(vehicle_counts.values()) != 0:
+        if sum(vehicle_counts.values()) % 50 == 0:
             os.makedirs("static", exist_ok=True)
             with open("static/vehicle_log.csv", "a", newline="") as file:
                 writer = csv.writer(file)
