@@ -22,9 +22,9 @@ CLASS_MAP = {
 def get_model_path():
     model_file = "yolov8l.pt"
     if not os.path.exists(model_file):
-        st.info("Downloading YOLOv8 model weights (~85 MB)...")
+        # Download from the existing Hugging Face repo
         model_file = hf_hub_download(
-            repo_id="YOUR_HF_USERNAME/YOUR_REPO_NAME",  # Replace with your Hugging Face repo with yolov8l.pt
+            repo_id="lkk688/yolov8l-model",
             filename="yolov8l.pt"
         )
     return model_file
