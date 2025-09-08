@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vehicle Speed Detection</title>
+</head>
+<body>
+    <h2>Upload a Video</h2>
+    <form action="/" method="POST" enctype="multipart/form-data">
+        <input type="file" name="video">
+        <input type="submit" value="Process">
+    </form>
+
+    {% if video_processed %}
+        <h3>Processed Video:</h3>
+        <video width="720" controls>
+            <source src="{{ output_video }}" type="video/mp4">
+        </video>
+    {% endif %}
+    <p><a href="{{ url_for('static', filename='vehicle_log.csv') }}" download>Download CSV Log</a></p>
+<p><a href="/dashboard">View Dashboard</a></p>
+
+</body>
+</html>
