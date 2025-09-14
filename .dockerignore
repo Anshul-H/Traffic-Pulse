@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+*.pth
+.DS_Store
+.git
+.vscode/
+*.pth
+*.ipynb_checkpoints/
+data/
+models/
+weights/
+*.ckpt
